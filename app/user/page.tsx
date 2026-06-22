@@ -20,6 +20,26 @@ export default function UserHubPage() {
         }
 
         if (nomeLocal) setColaboradorNome(nomeLocal);
+
+        // DISPARO DE PUSH AUTOMÁTICO NO NAVEGADOR DO CELULAR
+        const dispararPedidoNotificacao = async () => {
+            if (typeof window !== 'undefined' && 'Notification' in window) {
+                if (window.Notification.permission === 'default') {
+                    try {
+                        const permissao = await window.Notification.requestPermission();
+                        if (permissao === 'granted') {
+                            new window.Notification("GR Autopeças", {
+                                body: "Painel operacional conectado. Você receberá os alertas de pátio por aqui!",
+                            });
+                        }
+                    } catch (err) {
+                        console.error("Falha ao inicializar Web Push API no dispositivo:", err);
+                    }
+                }
+            }
+        };
+
+        dispararPedidoNotificacao();
     }, [router]);
 
     const handleDesconectar = () => {
@@ -120,7 +140,7 @@ export default function UserHubPage() {
 
             {/* FOOTER */}
             <footer className="w-full max-w-5xl mx-auto border-t border-[#e5e5ea] pt-5 mt-8 text-[8px] text-[#86868b] uppercase font-bold tracking-wider text-center select-none">
-                <div>GR Autopeças &amp; Serviços • Painel Central v1.1</div>
+                <div>GR Autopeças &amp; Serviços • Painel Central v1.2</div>
             </footer>
         </main>
     );
