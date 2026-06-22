@@ -82,7 +82,6 @@ function EspelhoPontoConteudo() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    // Validação de Sessão Local Segura
     useEffect(() => {
         const idLocal = localStorage.getItem('gr_colaborador_id');
         const nomeLocal = localStorage.getItem('gr_colaborador_nome');
@@ -230,7 +229,8 @@ function EspelhoPontoConteudo() {
             }
         });
 
-        saidasEmergency.forEach(s => {
+        // CORRIGIDO AQUI: Variável alterada de 'saidasEmergency' para 'saidasEmergencia' para sanar o erro de compilação
+        saidasEmergencia.forEach(s => {
             if (!s.horario_saida) return;
             const dLocal = new Date(new Date(s.horario_saida).toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
             const chave = `${s.funcionario_id}-${dLocal.getFullYear()}-${dLocal.getMonth() + 1}-${dLocal.getDate()}`;
@@ -301,6 +301,19 @@ function EspelhoPontoConteudo() {
         };
     };
 
+    // AJUSTADO AQUI: Cálculo consolidado e auditável extraído do loop de renderização para alimentar o rodapé perfeitamente
+    const totaisGeraisCiclo = useMemo(() => {
+        let acDiurna = 0; let acNoturna = 0; let acEmergencia = 0; let acPausas = 0;
+        diasDoCiclo.forEach(d => {
+            const j = obterDadosComExtrasDoDia(d);
+            acDiurna += (j.extraDiurnaMinutos - j.descontoDiurno);
+            acNoturna += (j.extraNoturnaMinutos - j.descontoNoturno);
+            acPausas += j.minutosPausaPurosDia;
+            acEmergencia += j.minutosEmergenciaAcumuladoDia;
+        });
+        return { diurna: acDiurna, noturna: acNoturna, pausas: acPausas, emergencia: acEmergencia };
+    }, [diasDoCiclo, mapaDadosAgrupados]);
+
     const formatarMinutosTotais = (minutos: number) => {
         const isNeg = minutos < 0; const abs = Math.abs(minutos);
         return `${isNeg ? '-' : ''}${Math.floor(abs / 60)}h ${(abs % 60).toString().padStart(2, '0')}m`;
@@ -321,7 +334,7 @@ function EspelhoPontoConteudo() {
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Consulta e Impressão de Cartão</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <Link href="/user/avisos" className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-center">🔔 Avisos</Link>
                     <select value={mesSelecionado} onChange={e => setMesSelecionado(Number(e.target.value))} className="bg-black border border-white/10 px-3 py-2 rounded-xl font-bold text-white text-xs outline-none cursor-pointer">
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (<option key={m} value={m}>Ciclo até 15/{String(m).padStart(2, '0')}</option>))}
@@ -348,8 +361,9 @@ function EspelhoPontoConteudo() {
                             </div>
                         </div>
 
+                        {/* AJUSTADO AQUI: Adicionado overflow-x-auto para garantir rolagem fluida e responsiva no celular */}
                         <div className="w-full overflow-x-auto print:overflow-visible">
-                            <table className="w-full text-left text-xs border-collapse table-auto print:table-fixed min-w-[950px] print:min-w-0">
+                            <table className="w-full text-left text-xs border-collapse table-auto print:table-fixed min-w-[1000px] print:min-w-0">
                                 <thead>
                                 <tr className="border-b border-slate-300 text-slate-800 uppercase font-black text-[9px] tracking-wider bg-slate-100">
                                     <th className="py-2 px-2 w-[85px] print:w-[58px]">Data</th>
@@ -366,72 +380,53 @@ function EspelhoPontoConteudo() {
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {(() => {
-                                    let acDiurna = 0; let acNoturna = 0; let acEmergencia = 0; let acPausas = 0;
-                                    return diasDoCiclo.map((itemDia, idx) => {
-                                        const j = obterDadosComExtrasDoDia(itemDia);
-                                        acDiurna += (j.extraDiurnaMinutos - j.descontoDiurno);
-                                        acNoturna += (j.extraNoturnaMinutos - j.descontoNoturno);
-                                        acEmergencia += j.minutosEmergenciaAcumuladoDia;
-                                        acPausas += j.minutosPausaPurosDia;
-                                        const isAtestado = j.textoAjuste.startsWith("ATESTADO:");
+                                {diasDoCiclo.map((itemDia, idx) => {
+                                    const j = obterDadosComExtrasDoDia(itemDia);
+                                    const isAtestado = j.textoAjuste.startsWith("ATESTADO:");
 
-                                        return (
-                                            <tr key={idx} className={`border-b border-slate-100 text-xs print:text-[9px] print:[color-adjust:exact] [color-adjust:exact] ${j.temAtraso ? 'bg-red-50/70 border-l-4 border-l-red-500' : isAtestado || j.textoAjuste ? 'bg-yellow-50' : itemDia.isFimDeSemana ? 'bg-slate-100/70' : 'hover:bg-slate-50'}`}>
-                                                <td className={`py-2 px-2 font-mono font-black ${j.temAtraso ? 'text-red-700' : isAtestado ? 'text-red-600' : itemDia.isDomingo ? 'text-blue-700' : itemDia.isFimDeSemana ? 'text-emerald-600' : 'text-black'}`}>
-                                                    {itemDia.label} <span className="font-sans font-bold text-[9px] opacity-65">[{itemDia.diaSemanaLabel}]</span>
-                                                </td>
-                                                <td className="py-2 px-2 font-mono text-center text-slate-700">{j.entrada}</td>
-                                                <td className="py-2 px-2 font-mono text-center text-slate-600">{j.saidaAlmoço}</td>
-                                                <td className="py-2 px-2 font-mono text-center text-slate-600">{j.voltaAlmoço}</td>
-                                                <td className="py-2 px-2 font-mono text-center text-slate-700">{j.saidaFinal}</td>
-                                                <td className="py-2 px-2 font-mono text-center text-red-600 bg-red-500/[0.02]">{j.emSaida}</td>
-                                                <td className="py-2 px-2 font-mono text-center text-red-600 bg-red-500/[0.02]">{j.emRetorno}</td>
-                                                <td className="py-2 px-2 font-mono text-center font-bold text-red-700 bg-red-500/[0.05]">{j.emDuracao}</td>
-                                                <td className="py-2 px-3 text-left text-[11px] print:text-[8px] text-red-700 bg-red-500/[0.02] italic truncate max-w-[180px]">{j.justificativa || '---'}</td>
-                                                <td className="py-2 px-2 font-mono text-center text-orange-600 bg-orange-500/[0.01] border-l border-slate-100">{j.totalPausa}</td>
-                                                <td className={`py-2 px-2 border-l border-dashed border-slate-200 text-center font-mono font-black text-[8px] uppercase tracking-tight whitespace-nowrap ${isAtestado ? 'text-red-600' : 'text-amber-700'}`}>
-                                                    {j.textoAjuste || ''}
-                                                </td>
-                                            </tr>
-                                        );
-                                    });
-                                })()}
+                                    return (
+                                        <tr key={idx} className={`border-b border-slate-100 text-xs print:text-[9px] print:[color-adjust:exact] [color-adjust:exact] ${j.temAtraso ? 'bg-red-50/70 border-l-4 border-l-red-500' : isAtestado || j.textoAjuste ? 'bg-yellow-50' : itemDia.isFimDeSemana ? 'bg-slate-100/70' : 'hover:bg-slate-50'}`}>
+                                            <td className={`py-2 px-2 font-mono font-black ${j.temAtraso ? 'text-red-700' : isAtestado ? 'text-red-600' : itemDia.isDomingo ? 'text-blue-700' : itemDia.isFimDeSemana ? 'text-emerald-600' : 'text-black'}`}>
+                                                {itemDia.label} <span className="font-sans font-bold text-[9px] opacity-65">[{itemDia.diaSemanaLabel}]</span>
+                                            </td>
+                                            <td className="py-2 px-2 font-mono text-center text-slate-700">{j.entrada}</td>
+                                            <td className="py-2 px-2 font-mono text-center text-slate-600">{j.saidaAlmoço}</td>
+                                            <td className="py-2 px-2 font-mono text-center text-slate-600">{j.voltaAlmoço}</td>
+                                            <td className="py-2 px-2 font-mono text-center text-slate-700">{j.saidaFinal}</td>
+                                            <td className="py-2 px-2 font-mono text-center text-red-600 bg-red-500/[0.02]">{j.emSaida}</td>
+                                            <td className="py-2 px-2 font-mono text-center text-red-600 bg-red-500/[0.02]">{j.emRetorno}</td>
+                                            <td className="py-2 px-2 font-mono text-center font-bold text-red-700 bg-red-500/[0.05]">{j.emDuracao}</td>
+                                            <td className="py-2 px-3 text-left text-[11px] print:text-[8px] text-red-700 bg-red-500/[0.02] italic truncate max-w-[180px]">{j.justificativa || '---'}</td>
+                                            <td className="py-2 px-2 font-mono text-center text-orange-600 bg-orange-500/[0.01] border-l border-slate-100">{j.totalPausa}</td>
+                                            <td className={`py-2 px-2 border-l border-dashed border-slate-200 text-center font-mono font-black text-[8px] uppercase tracking-tight whitespace-nowrap ${isAtestado ? 'text-red-600 font-extrabold' : 'text-amber-700'}`}>
+                                                {j.textoAjuste || ''}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                                 </tbody>
                             </table>
                         </div>
 
-                        {/* PLACAR RESUMIDO DO PROPRIO FUNCIONARIO */}
-                        {(() => {
-                            let totalD = 0; let totalN = 0; let totalP = 0; let totalE = 0;
-                            diasDoCiclo.forEach(d => {
-                                const j = obterDadosComExtrasDoDia(d);
-                                totalD += (j.extraDiurnaMinutos - j.descontoDiurno);
-                                totalN += (j.extraNoturnaMinutos - j.descontoNoturno);
-                                totalP += j.minutosPausaPurosDia;
-                                totalE += j.minutosEmergenciaAcumuladoDia;
-                            });
-                            return (
-                                <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80 select-none">
-                                    <div className="text-center lg:border-r border-slate-200 flex flex-col items-center justify-center">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Saldo Extra Diurna</p>
-                                        <p className="text-sm font-mono font-black text-emerald-600 mt-1">{formatarMinutosTotais(totalD)}</p>
-                                    </div>
-                                    <div className="text-center lg:border-r border-slate-200 flex flex-col items-center justify-center">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Saldo Extra Noturna</p>
-                                        <p className="text-sm font-mono font-black text-blue-700 mt-1">{formatarMinutosTotais(totalN)}</p>
-                                    </div>
-                                    <div className="text-center lg:border-r border-slate-200 flex flex-col items-center justify-center">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Horas de Intervalo</p>
-                                        <p className="text-sm font-mono font-black text-orange-500 mt-1">{formatarMinutosTotais(totalP)}</p>
-                                    </div>
-                                    <div className="text-center flex flex-col items-center justify-center">
-                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Tempo Fora de Pátio</p>
-                                        <p className="text-sm font-mono font-black text-red-600 mt-1">{formatarMinutosTotais(totalE)}</p>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                        {/* PLACAR RESUMIDO DO PROPRIO FUNCIONARIO TOTALMENTE SINCRONIZADO COM O FECHAMENTO */}
+                        <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80 select-none">
+                            <div className="text-center lg:border-r border-slate-200 flex flex-col items-center justify-center">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Saldo Extra Diurna (Líquido)</p>
+                                <p className="text-sm font-mono font-black text-emerald-600 mt-1">{formatarMinutosTotais(totaisGeraisCiclo.diurna)}</p>
+                            </div>
+                            <div className="text-center lg:border-r border-slate-200 flex flex-col items-center justify-center">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Saldo Extra Noturna (Líquido)</p>
+                                <p className="text-sm font-mono font-black text-blue-700 mt-1">{formatarMinutosTotais(totaisGeraisCiclo.noturna)}</p>
+                            </div>
+                            <div className="text-center lg:border-r border-slate-200 flex flex-col items-center justify-center">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Horas de Intervalo</p>
+                                <p className="text-sm font-mono font-black text-orange-500 mt-1">{formatarMinutosTotais(totaisGeraisCiclo.pausas)}</p>
+                            </div>
+                            <div className="text-center flex flex-col items-center justify-center">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Tempo Fora de Posto</p>
+                                <p className="text-sm font-mono font-black text-red-600 mt-1">{formatarMinutosTotais(totaisGeraisCiclo.emergencia)}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
             </section>
