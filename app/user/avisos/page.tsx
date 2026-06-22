@@ -32,6 +32,7 @@ export default function QuadroAvisosPage() {
     const carregarAvisosMural = async () => {
         setCarregando(true);
         try {
+            // Fará a requisição pública usando a role anon autorizada pela nova política
             const { data, error } = await supabase
                 .from('avisos')
                 .select('*')
@@ -52,17 +53,25 @@ export default function QuadroAvisosPage() {
 
     const handleAtivarNotificacoes = async () => {
         if (typeof window === 'undefined' || !('Notification' in window)) {
-            alert("Este dispositivo ou navegador não suporta notificações Push.");
+            alert("Este dispositivo ou navegador não suporta notificações Push locais.");
             return;
         }
 
-        const permission = await window.Notification.requestPermission();
-        setPermissaoPush(permission);
+        try {
+            const permission = await window.Notification.requestPermission();
+            setPermissaoPush(permission);
 
-        if (permission === 'granted') {
-            new window.Notification("GR Autopeças", {
-                body: "Notificações do painel operacional ativadas com sucesso!",
-            });
+            if (permission === 'granted') {
+                // Teste de disparo imediato após interação do clique do trabalhador
+                new window.Notification("GR Autopeças", {
+                    body: "Notificações ativadas! Os avisos de pátio serão exibidos aqui.",
+                    requireInteraction: true // Força o banner a ficar visível no Android
+                });
+            } else if (permission === 'denied') {
+                alert("As notificações foram bloqueadas nas configurações do seu celular. Altere as permissões do navegador.");
+            }
+        } catch (error) {
+            console.error("Erro ao solicitar permissão de avisos:", error);
         }
     };
 
@@ -73,8 +82,8 @@ export default function QuadroAvisosPage() {
                 {/* CABEÇALHO */}
                 <header className="space-y-1.5 pl-1 border-b border-[#e5e5ea] pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                        <Link href="/user/ponto" className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] hover:text-orange-600 transition-colors block">
-                            ← Voltar Pro Meu Ponto
+                        <Link href="/user" className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] hover:text-orange-600 transition-colors block">
+                            ← Voltar Pro Menu Principal
                         </Link>
                         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#1d1d1f]">
                             Comunicados &amp; Alertas de Pátio
@@ -141,7 +150,7 @@ export default function QuadroAvisosPage() {
 
             {/* FOOTER */}
             <footer className="w-full max-w-3xl mx-auto border-t border-[#e5e5ea] pt-5 mt-8 text-[8px] text-[#86868b] uppercase font-bold tracking-wider text-center select-none">
-                <div>GR Autopeças &amp; Serviços • Mural Eletrônico v1.0</div>
+                <div>GR Autopeças &amp; Serviços • Mural Eletrônico v1.1</div>
             </footer>
         </main>
     );
