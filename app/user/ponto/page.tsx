@@ -272,7 +272,6 @@ function EspelhoPontoConteudo() {
         const pts = dadosDoDia.pontos;
         let calcDiurna = 0; let calcNoturna = 0;
 
-        // Acumula observações internas registradas nas batidas originais (ex: Atrasos ou justificativas)
         const listaObs = pts.filter(p => p.observacao && p.observacao !== 'Normal').map(p => p.observacao);
         const obsPonto = listaObs.length > 0 ? Array.from(new Set(listaObs)).join('; ') : '';
 
@@ -323,7 +322,7 @@ function EspelhoPontoConteudo() {
     }, [diasDoCiclo, mapaDadosAgrupados]);
 
     const formatarMinutosTotais = (minutos: number) => {
-        const isNeg = minutes < 0; const abs = Math.abs(minutos);
+        const isNeg = minutos < 0; const abs = Math.abs(minutos);
         return `${isNeg ? '-' : ''}${Math.floor(abs / 60)}h ${(abs % 60).toString().padStart(2, '0')}m`;
     };
 
@@ -343,7 +342,7 @@ function EspelhoPontoConteudo() {
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <Link href="/user" className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-center"> Menu Principal</Link>
+                    <Link href="/user" className="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-center">Menu Principal</Link>
                     <select value={mesSelecionado} onChange={e => setMesSelecionado(Number(e.target.value))} className="bg-black border border-white/10 px-3 py-2 rounded-xl font-bold text-white text-xs outline-none cursor-pointer">
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (<option key={m} value={m}>Ciclo até 15/{String(m).padStart(2, '0')}</option>))}
                     </select>
