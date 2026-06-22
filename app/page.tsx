@@ -46,8 +46,8 @@ export default function PortalLoginPage() {
       localStorage.setItem('gr_colaborador_id', data.funcionario_id);
       localStorage.setItem('gr_colaborador_nome', data.nome);
 
-      // Redireciona direto para o espelho de ponto individual
-      router.push('/user/ponto');
+      // CORRIGIDO AQUI: Redireciona direto para o Hub Central de módulos do funcionário
+      router.push('/user');
 
     } catch (err: any) {
       console.error(err);
@@ -66,9 +66,9 @@ export default function PortalLoginPage() {
 
             {/* CABEÇALHO BRANDING */}
             <div className="text-center space-y-1.5 select-none">
-                        <span className="inline-block text-[8px] font-black uppercase tracking-[3px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
-                            Portal do Colaborador
-                        </span>
+              <span className="inline-block text-[8px] font-black uppercase tracking-[3px] text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+                  Portal do Colaborador
+              </span>
               <h1 className="text-xl font-bold tracking-tight text-[#1d1d1f]">
                 GR Autopeças
               </h1>
@@ -129,7 +129,7 @@ export default function PortalLoginPage() {
 
         {/* RODAPÉ INTEGRADO */}
         <footer className="w-full text-center text-[8px] font-bold uppercase tracking-wider text-[#b4b4b9] select-none py-4 border-t border-[#e5e5ea]/60 max-w-sm mx-auto">
-          GR Autopeças &amp; Serviços • v3.0
+          GR Autopeças &amp; Serviços • v3.1
         </footer>
       </main>
   );
