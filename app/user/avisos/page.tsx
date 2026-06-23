@@ -32,7 +32,6 @@ export default function QuadroAvisosPage() {
     const carregarAvisosMural = async () => {
         setCarregando(true);
         try {
-            // Fará a requisição pública usando a role anon autorizada pela nova política
             const { data, error } = await supabase
                 .from('avisos')
                 .select('*')
@@ -47,9 +46,39 @@ export default function QuadroAvisosPage() {
         }
     };
 
+    // ESCUTA EM TEMPO REAL (SUPABASE REALTIME) + DISPARO DE NOTIFICAÇÃO NATIVA
     useEffect(() => {
+        // 1. Carrega os avisos iniciais existentes
         carregarAvisosMural();
-    }, []);
+
+        // 2. Inscreve a página na escuta de novos registros inseridos pelo RH
+        const canalAvisos = supabase
+            .channel('mural_patio_realtime')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'avisos' },
+                (payload) => {
+                    const novoAviso = payload.new as Aviso;
+
+                    // Alimenta o topo da listagem de avisos na tela sem precisar recarregar a página
+                    setAvisos((prev) => [novoAviso, ...prev]);
+
+                    // Se o funcionário deu a permissão de notificações, dispara o balão físico no celular
+                    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                        new window.Notification(novoAviso.titulo, {
+                            body: novoAviso.conteudo,
+                            requireInteraction: novoAviso.importante // Mantém o banner preso no celular se for urgente
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        // Limpa a conexão do canal quando o funcionário sai da página para evitar vazamento de memória
+        return () => {
+            supabase.removeChannel(canalAvisos);
+        };
+    }, [supabase]);
 
     const handleAtivarNotificacoes = async () => {
         if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -62,13 +91,12 @@ export default function QuadroAvisosPage() {
             setPermissaoPush(permission);
 
             if (permission === 'granted') {
-                // Teste de disparo imediato após interação do clique do trabalhador
                 new window.Notification("GR Autopeças", {
-                    body: "Notificações ativadas! Os avisos de pátio serão exibidos aqui.",
-                    requireInteraction: true // Força o banner a ficar visível no Android
+                    body: "Notificações ativadas! Os avisos de pátio serão exibidos aqui em tempo real.",
+                    requireInteraction: true
                 });
             } else if (permission === 'denied') {
-                alert("As notificações foram bloqueadas nas configurações do seu celular. Altere as permissões do navegador.");
+                alert("As notificações foram bloqueadas. Libere o acesso nas configurações do seu navegador para receber os alertas.");
             }
         } catch (error) {
             console.error("Erro ao solicitar permissão de avisos:", error);
@@ -150,7 +178,7 @@ export default function QuadroAvisosPage() {
 
             {/* FOOTER */}
             <footer className="w-full max-w-3xl mx-auto border-t border-[#e5e5ea] pt-5 mt-8 text-[8px] text-[#86868b] uppercase font-bold tracking-wider text-center select-none">
-                <div>GR Autopeças &amp; Serviços • Mural Eletrônico v1.1</div>
+                <div>GR Autopeças &amp; Serviços • Mural Eletrônico v1.2</div>
             </footer>
         </main>
     );
