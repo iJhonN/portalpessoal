@@ -30,7 +30,7 @@ export default function UserHubPage() {
                     allowLocalhostAsSecureOrigin: true, // Deixa você testar no localhost do Mac
                     notifyButton: {
                         enable: false // Remove o botão flutuante padrão do OneSignal
-                    }
+                    } as any // Coerção de tipo para evitar o erro de propriedades obrigatórias no build
                 });
 
                 // Vincula o ID do crachá do funcionário no OneSignal
