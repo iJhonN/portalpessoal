@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import OneSignal from 'react-onesignal';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ export default function UserHubPage() {
     const router = useRouter();
     const [colaboradorNome, setColaboradorNome] = useState<string>('Colaborador');
 
-    // Garante a validação da sessão assim como no espelho de ponto
+    // Garante a validação da sessão e inicializa o Web Push de fundo
     useEffect(() => {
         const idLocal = localStorage.getItem('gr_colaborador_id');
         const nomeLocal = localStorage.getItem('gr_colaborador_nome');
@@ -21,25 +22,31 @@ export default function UserHubPage() {
 
         if (nomeLocal) setColaboradorNome(nomeLocal);
 
-        // DISPARO DE PUSH AUTOMÁTICO NO NAVEGADOR DO CELULAR
-        const dispararPedidoNotificacao = async () => {
-            if (typeof window !== 'undefined' && 'Notification' in window) {
-                if (window.Notification.permission === 'default') {
-                    try {
-                        const permissao = await window.Notification.requestPermission();
-                        if (permissao === 'granted') {
-                            new window.Notification("GR Autopeças", {
-                                body: "Painel operacional conectado. Você receberá os alertas de pátio por aqui!",
-                            });
-                        }
-                    } catch (err) {
-                        console.error("Falha ao inicializar Web Push API no dispositivo:", err);
+        // ATIVA A ANTENA DO ONESIGNAL EM BACKGROUND NO CELULAR
+        const dispararInscricaoPush = async () => {
+            try {
+                await OneSignal.init({
+                    appId: "dbbc92c0-c933-410c-a717-2abb81ec1313", // Seu App ID oficial
+                    allowLocalhostAsSecureOrigin: true, // Deixa você testar no localhost do Mac
+                    notifyButton: {
+                        enable: false // Remove o botão flutuante padrão do OneSignal
                     }
+                });
+
+                // Vincula o ID do crachá do funcionário no OneSignal
+                // Isso permite ao RH mandar mensagens para funcionários específicos se quiser futuramente
+                await OneSignal.login(idLocal);
+
+                // Abre o pop-up oficial pedindo a permissão das notificações nativas
+                if (OneSignal.Notifications) {
+                    await OneSignal.Notifications.requestPermission();
                 }
+            } catch (err) {
+                console.error("Falha ao sincronizar o motor Push do OneSignal:", err);
             }
         };
 
-        dispararPedidoNotificacao();
+        dispararInscricaoPush();
     }, [router]);
 
     const handleDesconectar = () => {
@@ -64,7 +71,7 @@ export default function UserHubPage() {
                     </p>
                 </header>
 
-                {/* GRID DE OPÇÕES ATUALIZADO PARA 3 COLUNAS */}
+                {/* GRID DE OPÇÕES EM 3 COLUNAS */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
 
                     {/* CARD: ESPELHO DE PONTO */}
@@ -105,7 +112,7 @@ export default function UserHubPage() {
                         </span>
                     </Link>
 
-                    {/* NOVO CARD: CRACHÁ VIRTUAL */}
+                    {/* CARD: CRACHÁ VIRTUAL */}
                     <Link
                         href="/user/cracha"
                         className="bg-white border border-[#e5e5ea] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:border-orange-500/30 flex flex-col justify-between group min-h-[140px] sm:col-span-2 lg:col-span-1"
@@ -140,7 +147,7 @@ export default function UserHubPage() {
 
             {/* FOOTER */}
             <footer className="w-full max-w-5xl mx-auto border-t border-[#e5e5ea] pt-5 mt-8 text-[8px] text-[#86868b] uppercase font-bold tracking-wider text-center select-none">
-                <div>GR Autopeças &amp; Serviços • Painel Central v1.2</div>
+                <div>GR Autopeças &amp; Serviços • Painel Central v1.3</div>
             </footer>
         </main>
     );
