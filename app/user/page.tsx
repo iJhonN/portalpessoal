@@ -71,8 +71,8 @@ export default function UserHubPage() {
                     </p>
                 </header>
 
-                {/* GRID DE OPÇÕES EM 3 COLUNAS */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                {/* GRID DE OPÇÕES EXPANSÍVEL */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 w-full max-w-4xl mx-auto">
 
                     {/* CARD: ESPELHO DE PONTO */}
                     <Link
@@ -115,7 +115,7 @@ export default function UserHubPage() {
                     {/* CARD: CRACHÁ VIRTUAL */}
                     <Link
                         href="/user/cracha"
-                        className="bg-white border border-[#e5e5ea] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:border-orange-500/30 flex flex-col justify-between group min-h-[140px] sm:col-span-2 lg:col-span-1"
+                        className="bg-white border border-[#e5e5ea] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:border-orange-500/30 flex flex-col justify-between group min-h-[140px]"
                     >
                         <div className="space-y-1.5">
                             <div className="text-xl group-hover:scale-110 transition-transform w-fit select-none">🪪</div>
@@ -128,6 +128,25 @@ export default function UserHubPage() {
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] group-hover:text-orange-600 transition-colors mt-4 block">
                             Visualizar ID →
+                        </span>
+                    </Link>
+
+                    {/* CARD: CONFIGURAÇÕES DA CONTA (NOVO) */}
+                    <Link
+                        href="/user/configurar"
+                        className="bg-white border border-[#e5e5ea] rounded-2xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.01)] transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:border-orange-500/30 flex flex-col justify-between group min-h-[140px]"
+                    >
+                        <div className="space-y-1.5">
+                            <div className="text-xl group-hover:scale-110 transition-transform w-fit select-none">⚙️</div>
+                            <h2 className="text-sm font-bold text-[#1d1d1f] uppercase tracking-tight">
+                                Configurações
+                            </h2>
+                            <p className="text-[11px] text-[#86868b] font-medium leading-relaxed">
+                                Gerencie a segurança do seu acesso ao portal e altere sua senha de entrada.
+                            </p>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] group-hover:text-orange-600 transition-colors mt-4 block">
+                            Editar Segurança →
                         </span>
                     </Link>
 
@@ -147,7 +166,7 @@ export default function UserHubPage() {
 
             {/* FOOTER */}
             <footer className="w-full max-w-5xl mx-auto border-t border-[#e5e5ea] pt-5 mt-8 text-[8px] text-[#86868b] uppercase font-bold tracking-wider text-center select-none">
-                <div>GR Autopeças &amp; Serviços • Painel Central v1.3</div>
+                <div>GR Autopeças &amp; Serviços • Painel Central v1.4</div>
             </footer>
         </main>
     );
