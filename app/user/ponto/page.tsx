@@ -103,24 +103,17 @@ function EspelhoPontoConteudo() {
             try {
                 const [resFunc, resPontos, resPausas, resSaidas, resExtras, resBanco] = await Promise.all([
                     supabase.from('funcionarios').select('cargo').eq('id', colaboradorId).single(),
-                    supabase.from('pontos').select('*').eq('funcionario_id', colaboradorId),
-                    supabase.from('pausas').select('*').eq('funcionario_id', colaboradorId),
-                    supabase.from('saidas_emergency' as any).select('*').eq('funcionario_id', colaboradorId), // Compatibilidade com possíveis variações de nome de tabela
-                    supabase.from('horas_extras').select('*').eq('funcionario_id', colaboradorId),
-                    supabase.from('banco_horas').select('*').eq('funcionario_id', colaboradorId)
+                    supabase.from('pontos').select('id, funcionario_id, data_registro, hora_formatada, tipo_batida, observacao').eq('funcionario_id', colaboradorId),
+                    supabase.from('pausas').select('id, funcionario_id, data, minutos_ajuste, tipo, observacao').eq('funcionario_id', colaboradorId),
+                    supabase.from('saidas_emergencia').select('id, funcionario_id, horario_saida, horario_retorno, justificativa').eq('funcionario_id', colaboradorId),
+                    supabase.from('horas_extras').select('id, funcionario_id, data_referencia, minutos_diurnos, minutos_noturnos').eq('funcionario_id', colaboradorId),
+                    supabase.from('banco_horas').select('id, funcionario_id, data_evento, minutos_ajuste, tipo_hora, motivo').eq('funcionario_id', colaboradorId)
                 ]);
-
-                // Fallback caso a tabela se chame 'saidas_emergencia' no seu banco atual
-                let dadosSaidas = resSaidas.data;
-                if (resSaidas.error) {
-                    const resSaidasAlt = await supabase.from('saidas_emergencia').select('*').eq('funcionario_id', colaboradorId);
-                    if (resSaidasAlt.data) dadosSaidas = resSaidasAlt.data;
-                }
 
                 if (resFunc.data) setCargo(resFunc.data.cargo);
                 if (resPontos.data) setPontos(resPontos.data as RegistroPonto[]);
                 if (resPausas.data) setPausas(resPausas.data as RegistroPausa[]);
-                if (dadosSaidas) setSaidasEmergencia(dadosSaidas as SaidaEmergency[]);
+                if (resSaidas.data) setSaidasEmergencia(resSaidas.data as SaidaEmergency[]);
                 if (resExtras.data) setExtrasManuais(resExtras.data as HoraExtraManual[]);
                 if (resBanco.data) setBancoHoras(resBanco.data as BancoHorasMovimentacao[]);
             } catch (error) {
@@ -172,6 +165,7 @@ function EspelhoPontoConteudo() {
         return listaDias;
     }, [mesSelecionado, anoSelecionado]);
 
+    // MAPA DE DADOS COPIADO 1:1 DA SUA BASE QUE FUNCIONA PERFEITAMENTE
     const mapaDadosAgrupados = useMemo(() => {
         const mapa: {
             [chave: string]: {
@@ -199,7 +193,9 @@ function EspelhoPontoConteudo() {
             if (!mapa[chave]) mapa[chave] = { pontos: [], minutosPausa: 0, textoAjuste: '', emergenciaSaida: '---', emergenciaRetorno: '---', emergenciaDuracao: '---', emergenciaMinutosTotais: 0, justificativa: '', extraManualDiurna: 0, extraManualNoturna: 0, temAtraso: false, descontoDiurno: 0, descontoNoturno: 0 };
             mapa[chave].pontos.push(p);
 
-            if (p.observacao === 'Atraso') mapa[chave].temAtraso = true;
+            if (p.observacao === 'Atraso') {
+                mapa[chave].temAtraso = true;
+            }
         });
 
         pausas.forEach(p => {
@@ -282,18 +278,16 @@ function EspelhoPontoConteudo() {
         return mapa;
     }, [pontos, pausas, saidasEmergencia, extrasManuais, bancoHoras]);
 
-    const obterDadosComExtrasDoDia = (itemDia: DiaCompetencia) => {
+    const obterDadosComExtrasDoDia = (funcionarioId: string, itemDia: DiaCompetencia) => {
+        const chave = `${funcionarioId}-${itemDia.ano}-${itemDia.mes}-${itemDia.dia}`;
+        const dadosDoDia = mapaDadosAgrupados[chave];
+
         const retornoBase = {
             entrada: '---', saidaAlmoço: '---', voltaAlmoço: '---', saidaFinal: '---',
             totalPausa: '---', emSaida: '---', emRetorno: '---', emDuracao: '---',
             justificativa: '', extraDiurnaMinutos: 0, extraNoturnaMinutos: 0, minutosEmergenciaAcumuladoDia: 0, minutosPausaPurosDia: 0, temAtraso: false,
             textoAjuste: '', descontoDiurno: 0, descontoNoturno: 0
         };
-
-        if (!colaboradorId) return retornoBase;
-
-        const chave = `${colaboradorId}-${itemDia.ano}-${itemDia.mes}-${itemDia.dia}`;
-        const dadosDoDia = mapaDadosAgrupados[chave];
 
         if (!dadosDoDia) return retornoBase;
 
@@ -350,15 +344,17 @@ function EspelhoPontoConteudo() {
 
     const totaisGeraisCiclo = useMemo(() => {
         let acDiurna = 0; let acNoturna = 0; let acEmergencia = 0; let acPausas = 0;
+        if (!colaboradorId) return { diurna: 0, noturna: 0, pausas: 0, emergencia: 0 };
+
         diasDoCiclo.forEach(d => {
-            const j = obterDadosComExtrasDoDia(d);
+            const j = obterDadosComExtrasDoDia(colaboradorId, d);
             acDiurna += (j.extraDiurnaMinutos - j.descontoDiurno);
             acNoturna += (j.extraNoturnaMinutos - j.descontoNoturno);
             acPausas += j.minutosPausaPurosDia;
             acEmergencia += j.minutosEmergenciaAcumuladoDia;
         });
         return { diurna: acDiurna, noturna: acNoturna, pausas: acPausas, emergencia: acEmergencia };
-    }, [diasDoCiclo, mapaDadosAgrupados]);
+    }, [diasDoCiclo, mapaDadosAgrupados, colaboradorId]);
 
     const formatarMinutosTotais = (minutos: number) => {
         const isNegativo = minutos < 0;
@@ -431,7 +427,7 @@ function EspelhoPontoConteudo() {
                                 </thead>
                                 <tbody>
                                 {diasDoCiclo.map((itemDia, idx) => {
-                                    const j = obterDadosComExtrasDoDia(itemDia);
+                                    const j = obterDadosComExtrasDoDia(colaboradorId || '', itemDia);
                                     const possuiExcecaoAmarela = !!j.textoAjuste;
 
                                     return (
